@@ -2,19 +2,44 @@
 #save them as mongoDB records
 
 import tweepy
+import pprint
 
-auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(access_token, access_token_secret)
+from twitter_crawler_config import ConfigTwitterCrawler
+from pymongo import MongoClient
+from datetime import datetime
 
+#get object for configuration
+tc_config = ConfigTwitterCrawler()
+
+#get database address from configuration
+db_address = tc_config.db_address
+
+#connection to mongo database
+conn = MongoClient(db_address)
+
+db_tweet = conn['tweet']
+
+#twitter authentication
+auth = tweepy.OAuthHandler(tc_config.consumer_key, tc_config.consumer_secret)
+auth.set_access_token(tc_config.access_token, tc_config.access_token_secret)
+
+#get api object
 api = tweepy.API(auth)
 
-twitter_id_list = list
+#get list of twitter ids from configuration
+twitter_id_list = tc_config.twitter_id_list
 
-for twitter_id in twitter_id_list:
-    status_list = api.user_timeline(user_id=twitter_id)
+for twitter_id in twitter_id_list:				#for each twitter id
+    status_list = api.user_timeline(screen_name=twitter_id) 	#get the list of tweets
 
-    for status in status_list:
-        #add status to db
+    for status in status_list:					#for each list of tweets
 
-
-
+        #insert tweets into database
+        db_tweet.tweet.insert_one(
+            {
+                'screen_name': status.author.screen_name, 
+                'text': status.text,
+                'id_tweet' : status.id,
+                'created_at': status.created_at
+            }
+        )
